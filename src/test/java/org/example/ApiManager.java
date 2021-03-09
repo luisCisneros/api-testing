@@ -69,12 +69,6 @@ public class ApiManager {
         setUpRestAssured(properties.getProperty("base.uri"), properties.getProperty("base.path"));
     }
 
-//    public void setUpRestAssured() {
-//        Properties properties = getProperties(PROPERTIES_PATH);
-//        RestAssured.baseURI = properties.getProperty("base.uri");
-//        RestAssured.basePath = properties.getProperty("base.path");
-//    }
-
     public void setUpRestAssured(String baseURI, String basePath) {
         RestAssured.baseURI = baseURI;
         RestAssured.basePath = basePath;
