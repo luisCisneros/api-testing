@@ -4,14 +4,13 @@ import io.cucumber.java.en.And;
 import io.cucumber.java.en.Given;
 import io.cucumber.java.en.Then;
 import io.cucumber.java.en.When;
-import io.restassured.builder.RequestSpecBuilder;
 import io.restassured.path.json.JsonPath;
 import io.restassured.response.Response;
 import io.restassured.specification.RequestSpecification;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.example.ApiManager;
-import org.example.TestContext;
+import org.example.ScenarioContext;
 
 import java.util.Map;
 
@@ -23,49 +22,40 @@ public class UserProfileSteps {
 
     private static final Logger logger = LogManager.getLogger();
 
-    private final RequestSpecification requestSpecification;
-    private final TestContext testContext;
+    private final ApiManager apiManager;
+    private final ScenarioContext scenarioContext;
 
-    public UserProfileSteps(ApiManager apiManager, TestContext testContext) {
-        requestSpecification = new RequestSpecBuilder().
-                setAuth(oauth2(apiManager.getAccessToken())).
-                build();
-        this.testContext = testContext;
+    public UserProfileSteps(ApiManager apiManager, ScenarioContext scenarioContext) {
+        this.apiManager = apiManager;
+        this.scenarioContext = scenarioContext;
     }
 
     @Given("I have a valid access token")
     public void iHaveAValidAccessToken() {
-        RequestSpecification request = given().spec(requestSpecification);
-        testContext.setRequestSpecification(request);
+        RequestSpecification request = given().spec(apiManager.getAuthRequestSpecification());
+        scenarioContext.setRequestSpecification(request);
     }
 
-    @When("I/(the user) submit(s) a GET request to {string} endpoint")
-    public void iSubmitAGETRequestToEndpoint(String endpoint) {
-        Response response = testContext.getRequestSpecification().
-                when().get(endpoint);
-        testContext.setResponse(response);
+    @When("I/(the user) submit(s) a {string} request to {string}( endpoint)")
+    public void iSubmitAGETRequestToEndpoint(String method, String endpoint) {
+        Response response = apiManager.sendHttpRequest(scenarioContext, method, endpoint);
+        scenarioContext.setResponse(response);
     }
 
     @Then("the following details must be present on the response")
     public void theFollowingDetailsMustBePresentOnTheResponse(Map<String, String> expectedResponseDetails) {
-        JsonPath jsonPath = testContext.getResponse().then().extract().jsonPath();
+        JsonPath jsonPath = scenarioContext.getResponse().then().extract().jsonPath();
         logger.debug("Values from response");
         for (String key : expectedResponseDetails.keySet()) {
             String actualValue = jsonPath.getString(key);
 //            logger.debug("{}: [{}]", key, actualValue);
-            logger.debug("{}:   expected[{}]    actual[{}]", key, expectedResponseDetails.get(key), actualValue);
+            logger.debug("{}:   expected [{}]    actual [{}]", key, expectedResponseDetails.get(key), actualValue);
             assertEquals(expectedResponseDetails.get(key), actualValue);
         }
     }
 
-    @Given("I/(the user) want(s) to search for user id {string}")
-    public void iWantToSearchForUserId(String userId) {
-        RequestSpecification request = given().log().all().spec(requestSpecification).pathParam("user_id", userId);
-        testContext.setRequestSpecification(request);
-    }
-
     @And("the response status code should be {int}")
     public void theResponseStatusCodeShouldBe(int statusCode) {
-        testContext.getResponse().then().assertThat().statusCode(statusCode);
+        scenarioContext.getResponse().then().assertThat().statusCode(statusCode);
     }
 }
